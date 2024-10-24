@@ -14,8 +14,19 @@ arrays = [
 # %%
 
 # Calculate and print the mean for each array
-for i, arr in enumerate(arrays, 1):
-    mean = np.mean(arr)
-    print(f"Mean of array {i}: {mean:.4f}")
+# for i, arr in enumerate(arrays, 1):
+#     mean = np.mean(arr)
+#     print(f"Mean of array {i}: {mean:.4f}")
+
+# %%
+# Convert the list of lists to a numpy array
+np_arrays = np.array(arrays)
+
+# Calculate the average for each index
+averages = np.mean(np_arrays, axis=0)
+
+# Print the results
+for i, avg in enumerate(averages):
+    print(f"Average for index {i}: {avg:.4f}")
 
 # %%
