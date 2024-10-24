@@ -12,6 +12,28 @@ wwiii_cdf = np.array([0.3, 0.3144, 0.3861, 0.4579, 0.5297])
 
 
 # %%
+## AGI Probability Distribution
+years = np.linspace(2020, 2140, 1000)
+
+plt.figure(figsize=(12, 8))
+plt.plot(years, agi_cdf, label="AGI", color="blue")
+plt.plot(years, wwiii_cdf, label="WWIII", color="red")
+
+plt.scatter(time_points, agi_cdf, color="blue")
+plt.scatter(time_points, wwiii_cdf, color="red")
+
+plt.title("AGI and WWIII Cumulative Probability Distributions Over Time", fontsize=16)
+plt.xlabel("Year", fontsize=12)
+plt.ylabel("Cumulative Probability", fontsize=12)
+plt.grid(True, linestyle="--", alpha=0.7)
+
+plt.ylim(0, 1)
+plt.legend(fontsize=10)
+plt.tight_layout()
+plt.show()
+
+
+# %%
 ## Fit a normal distribution to the probabilities
 def fit_normal_distribution(cdf, time_points):
     def objective(params):
@@ -30,8 +52,10 @@ wwiii_params = fit_normal_distribution(wwiii_cdf, time_points)
 
 # %%
 ## Calculate probability using cumulative probabilities
-def calculate_lock_in_prob(agi_prob, wwiii_prob, misalignment_prob):
+def calculate_lock_in_prob(agi_prob, wwiii_prob):
     # TODO: Placeholder, replace with weightings
+    # also add misalignment probability to the calculation
+
     return max(agi_prob, wwiii_prob)
 
 
@@ -57,7 +81,6 @@ for year in time_points:
 
 # %%
 ## Display distribution as graph
-years = np.linspace(2020, 2140, 1000)
 plt.figure(figsize=(12, 8))
 plt.plot(years, agi_probs, label="AGI", color="blue")
 plt.plot(years, wwiii_probs, label="WWIII", color="red")
@@ -67,29 +90,6 @@ plt.scatter(time_points, agi_cdf, color="blue", zorder=5)
 plt.scatter(time_points, wwiii_cdf, color="red", zorder=5)
 lock_in_points = [lock_in_probability(year) for year in time_points]
 plt.scatter(time_points, lock_in_points, color="purple", zorder=5)
-
-for i, year in enumerate(time_points):
-    plt.annotate(
-        f"{agi_cdf[i]:.2f}",
-        (year, agi_cdf[i]),
-        xytext=(0, 10),
-        textcoords="offset points",
-        ha="center",
-    )
-    plt.annotate(
-        f"{wwiii_cdf[i]:.2f}",
-        (year, wwiii_cdf[i]),
-        xytext=(0, -15),
-        textcoords="offset points",
-        ha="center",
-    )
-    plt.annotate(
-        f"{lock_in_points[i]:.2f}",
-        (year, lock_in_points[i]),
-        xytext=(0, 25),
-        textcoords="offset points",
-        ha="center",
-    )
 
 plt.title("Cumulative Probability Distributions")
 plt.xlabel("Year")
