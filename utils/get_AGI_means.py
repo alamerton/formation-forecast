@@ -30,3 +30,4 @@ for i, avg in enumerate(averages):
     print(f"Average for index {i}: {avg:.4f}")
 
 # %%
+# [0.2809, 0.6433, 0.7649, 0.8673, 0.9250]

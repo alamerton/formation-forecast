@@ -1,4 +1,5 @@
 # %%
+import numpy as np
 from pgmpy.models import BayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference import VariableElimination
@@ -13,6 +14,8 @@ model = BayesianNetwork(
         ("misalignment", "lock-in"),
     ]
 )
+
+time_points = np.array([2030, 2055, 2080, 2105, 2130])
 
 # %%
 ## Conditional probability distributions for each node
@@ -45,3 +48,5 @@ p_lock_in = inference.query(["lock_in"])
 
 print("Probability distribution of lock-in:")
 print(p_lock_in)
+
+# %%
