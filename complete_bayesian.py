@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 from typing import List, Dict, Tuple
+import matplotlib.pyplot as plt
 
 
 # %%
@@ -54,7 +55,8 @@ class LockInForecast:
                         * (p_wwiii[year_idx] if wwiii else (1 - p_wwiii[year_idx]))
                         * (
                             p_misalignment if agi else 1.0
-                        )  # Misalignment only matters if AGI exists
+                        )  # Misalignment only matters if AGI exists (at least
+                        # for the sake of this iteration)
                     )
 
                     # Multiply by conditional probability of lock-in given this combination
@@ -101,9 +103,40 @@ class LockInForecast:
 
 
 # %%
-# Example usage:
+
+
+def plot_forecast(forecast):
+    years = forecast["years"]
+    p_agi = forecast["p_agi"]
+    p_wwiii = forecast["p_wwiii"]
+    p_lock_in = forecast["p_lock_in"]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(years, p_agi, marker="o", label="AGI Probability")
+    plt.plot(years, p_wwiii, marker="s", label="WWIII Probability")
+    plt.plot(years, p_lock_in, marker="^", label="Lock-in Probability")
+
+    plt.title("Lock-in Forecast Over Time")
+    plt.xlabel("Year")
+    plt.ylabel("Probability")
+    plt.legend()
+    plt.grid(True, linestyle="--", alpha=0.7)
+
+    plt.ylim(0, 1)  # Set y-axis limits from 0 to 1
+    plt.xticks(years)  # Set x-axis ticks to the forecast years
+
+    # Add value labels
+    for i, year in enumerate(years):
+        plt.text(year, p_agi[i], f"{p_agi[i]:.2f}", ha="center", va="bottom")
+        plt.text(year, p_wwiii[i], f"{p_wwiii[i]:.2f}", ha="center", va="bottom")
+        plt.text(year, p_lock_in[i], f"{p_lock_in[i]:.2f}", ha="center", va="top")
+
+    plt.tight_layout()
+    plt.show()
+
+
+# %%
 def main():
-    # Sample data from your notes
     agi_forecasts = [
         [0.2809, 0.6433, 0.7649, 0.8673, 0.9250],  # Epoch model-based
         [0.6572, 0.9334, 0.9603, 0.9697, 0.9745],  # Metaculus weakly general
@@ -140,6 +173,9 @@ def main():
         print(f"  WWIII Probability: {forecast['p_wwiii'][i]:.2%}")
         print(f"  Lock-in Probability: {forecast['p_lock_in'][i]:.2%}")
         print()
+
+    # Plot lock-in probability distribution
+    plot_forecast(forecast)
 
 
 # %%
