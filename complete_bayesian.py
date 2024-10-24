@@ -2,6 +2,7 @@
 import numpy as np
 from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
+from scipy.interpolate import make_interp_spline
 
 
 # %%
@@ -111,10 +112,32 @@ def plot_forecast(forecast):
     p_wwiii = forecast["p_wwiii"]
     p_lock_in = forecast["p_lock_in"]
 
+    # Create smooth curves using spline interpolation
+    years_smooth = np.linspace(min(years), max(years), 500)  # 500 points for smoothness
+
+    # Interpolating AGI Probability
+    spline_agi = make_interp_spline(years, p_agi, k=3)  # Cubic spline
+    p_agi_smooth = spline_agi(years_smooth)
+
+    # Interpolating WWIII Probability
+    spline_wwiii = make_interp_spline(years, p_wwiii, k=3)  # Cubic spline
+    p_wwiii_smooth = spline_wwiii(years_smooth)
+
+    # Interpolating Lock-in Probability
+    spline_lock_in = make_interp_spline(years, p_lock_in, k=3)  # Cubic spline
+    p_lock_in_smooth = spline_lock_in(years_smooth)
+
     plt.figure(figsize=(12, 6))
-    plt.plot(years, p_agi, marker="o", label="AGI Probability")
-    plt.plot(years, p_wwiii, marker="s", label="WWIII Probability")
-    plt.plot(years, p_lock_in, marker="^", label="Lock-in Probability")
+
+    # Plotting the smooth curves
+    plt.plot(years_smooth, p_agi_smooth, label="AGI Probability", color="blue")
+    plt.plot(years_smooth, p_wwiii_smooth, label="WWIII Probability", color="orange")
+    plt.plot(years_smooth, p_lock_in_smooth, label="Lock-in Probability", color="green")
+
+    # Plotting the original data points
+    plt.scatter(years, p_agi, color="blue", marker="o")  # AGI points
+    plt.scatter(years, p_wwiii, color="orange", marker="s")  # WWIII points
+    plt.scatter(years, p_lock_in, color="green", marker="^")  # Lock-in points
 
     plt.title("Lock-in Forecast Over Time")
     plt.xlabel("Year")
@@ -125,11 +148,11 @@ def plot_forecast(forecast):
     plt.ylim(0, 1)  # Set y-axis limits from 0 to 1
     plt.xticks(years)  # Set x-axis ticks to the forecast years
 
-    # Add value labels
-    for i, year in enumerate(years):
-        plt.text(year, p_agi[i], f"{p_agi[i]:.2f}", ha="center", va="bottom")
-        plt.text(year, p_wwiii[i], f"{p_wwiii[i]:.2f}", ha="center", va="bottom")
-        plt.text(year, p_lock_in[i], f"{p_lock_in[i]:.2f}", ha="center", va="top")
+    # # Add value labels at the original data points
+    # for i, year in enumerate(years):
+    #     plt.text(year, p_agi[i], f"{p_agi[i]:.2f}", ha="center", va="bottom")
+    #     plt.text(year, p_wwiii[i], f"{p_wwiii[i]:.2f}", ha="center", va="bottom")
+    #     plt.text(year, p_lock_in[i], f"{p_lock_in[i]:.2f}", ha="center", va="top")
 
     plt.tight_layout()
     plt.show()
