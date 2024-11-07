@@ -8,6 +8,8 @@ def interpolate(x, x_values, y_values):
 
 
 # %%
+# When extrapolating below, use the leftmost data points rather than the
+# rightmost?
 def extrapolate(x, x_values, y_values):
     slope = (y_values[-1] - y_values[-2]) / (x_values[-1] - x_values[-2])
     return y_values[-1] + slope * (x - x_values[-1])
@@ -24,8 +26,11 @@ year_c = 2080
 year_d = 2105
 year_e = 2130
 
+# Extrapolation (before available range)
+print(f"Interpolated value for {year_a}: {extrapolate(year_a, x_values, y_values)}%")
+
 # Interpolation
-print(f"Interpolated value for {year_a}: {interpolate(year_a, x_values, y_values)}%")
+# print(f"Interpolated value for {year_a}: {interpolate(year_a, x_values, y_values)}%")
 print(f"Interpolated value for {year_b}: {interpolate(year_b, x_values, y_values)}%")
 print(f"Interpolated value for {year_c}: {interpolate(year_c, x_values, y_values)}%")
 
