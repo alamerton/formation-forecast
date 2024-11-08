@@ -11,53 +11,29 @@ class LockInForecast:
     def __init__(self, forecast_years: List[int] = [2030, 2055, 2080, 2105, 2130]):
         self.forecast_years = forecast_years
 
-    def calculate_agi_probability(
-        self, agi_forecasts: List[List[float]]
-    ) -> List[float]:
-        """
-        Combines multiple AGI timeline forecasts using geometric mean of
-        odds
-        Args:
-            agi_forecasts: List of forecasts, each containing
-            probabilities for forecast_years
-        Returns:
-            Combined AGI probability for each year
-        """
-        # Weights could be adjusted based on forecast quality/credibility
-        # For each column (year) in agi forecasts, return the geometric
-        # mean of odds of each value in that column (each forecast
-        # representing that year)
-
-        # [0.2809, 0.6433, 0.7649, 0.8673, 0.9250],  # Epoch model-based
-        # [0.6572, 0.9334, 0.9603, 0.9697, 0.9745],  # Metaculus weakly general
-        # [0.4183, 0.8478, 0.9002, 0.9279, 0.9552],  # Metaculus general
-        # [0.1000, 0.5324, 0.8027, 1.0000, 1.0000],  # AI Impacts
-        # [0.3100, 0.6480, 0.7380, 0.8280, 0.9180],  # Samotsvety
-
-        weights = np.ones(len(agi_forecasts)) / len(agi_forecasts)
-        # return np.average(agi_forecasts, weights=weights, axis=0)
-        average_probs = []
-        # For each distribution
-        for col in zip(*agi_forecasts):
-            average_probs[col] = get_geometric_mean(agi_forecasts[col])
-
-        # Returns single distribution, average_probs, of shape (1,5) where thing[i] =
-        # probability of agi for year i
-
     def calculate_conditional_probability(
         self,
         p_agi: List[float],
-        p_misalignment: float,
+        p_misalignment: List[float],
         p_wwiii: List[float],
-        cpt: Dict[Tuple[bool, bool, bool], float],
+        p_wbe: List[float],
+        p_stable_total: List[float],
+        p_world_gov: List[float],
+        cpt: Dict[Tuple[bool, bool, bool, bool, bool, bool], float],
     ) -> List[float]:
         """
-        Calculates lock-in probability using a simplified Bayesian network
+        Calculates lock-in probability using a simplified Bayesian
+        network
         Args:
             p_agi: AGI probability for each year
             p_misalignment: Probability of AGI misalignment
             p_wwiii: WWIII probability for each year
-            cpt: Conditional probability table for lock-in given AGI, misalignment, and WWIII
+            p_wbe: Whole brain emulation probability for each year
+            p_stable_total: Stable totalitarian probability for each
+            year
+            p_world_gov: World government probability for each year
+            cpt: Conditional probability table for lock-in given those
+            probabilities
         Returns:
             Lock-in probability for each year
         """
@@ -69,21 +45,59 @@ class LockInForecast:
 
             # Iterate through all possible combinations of events
             for agi in [True, False]:
-                for wwiii in [True, False]:
-                    # Calculate probability of this combination
-                    p_combination = (
-                        (p_agi[year_idx] if agi else (1 - p_agi[year_idx]))
-                        * (p_wwiii[year_idx] if wwiii else (1 - p_wwiii[year_idx]))
-                        * (
-                            p_misalignment if agi else 1.0
-                        )  # Misalignment only matters if AGI exists (at least
-                        # for the sake of this iteration)
-                    )
+                for misalignment in [True, False]:
+                    for wwiii in [True, False]:
+                        for wbe in [True, False]:
+                            for stable_total in [True, False]:
+                                for world_gov in [True, False]:
+                                    # Calculate probability of this combination
+                                    p_combination = (
+                                        (
+                                            p_agi[year_idx]
+                                            if agi
+                                            else (1 - p_agi[year_idx])
+                                        )
+                                        * (
+                                            p_misalignment[year_idx]
+                                            if misalignment
+                                            else (1 - p_misalignment[year_idx])
+                                        )
+                                        * (
+                                            p_wwiii[year_idx]
+                                            if wwiii
+                                            else (1 - p_wwiii[year_idx])
+                                        )
+                                        * (
+                                            p_wbe[year_idx]
+                                            if wbe
+                                            else (1 - p_wbe[year_idx])
+                                        )
+                                        * (
+                                            p_stable_total[year_idx]
+                                            if stable_total
+                                            else (1 - p_stable_total[year_idx])
+                                        )
+                                        * (
+                                            p_world_gov[year_idx]
+                                            if world_gov
+                                            else (1 - p_world_gov[year_idx])
+                                        )
+                                    )
 
-                    # Multiply by conditional probability of lock-in given this combination
-                    p_total += (
-                        p_combination * cpt[(agi, True, wwiii)]
-                    )  # Using True for misalignment when AGI exists
+                                    # Multiply by conditional probability of lock-in given this combination
+                                    p_total += (
+                                        p_combination
+                                        * cpt[
+                                            (
+                                                agi,
+                                                misalignment,
+                                                wwiii,
+                                                wbe,
+                                                stable_total,
+                                                world_gov,
+                                            )
+                                        ]
+                                    )
 
             p_lock_in.append(p_total)
 
@@ -91,10 +105,13 @@ class LockInForecast:
 
     def generate_forecast(
         self,
-        agi_forecasts: List[List[float]],
+        p_agi: List[float],
         p_misalignment: float,
         p_wwiii: List[float],
-        cpt: Dict[Tuple[bool, bool, bool], float],
+        p_wbe: List[float],
+        p_stable_total: List[float],
+        p_world_gov: List[float],
+        cpt: Dict[Tuple[bool, bool, bool, bool, bool, bool], float],
     ) -> Dict[str, List[float]]:
         """
         Generates complete lock-in forecast
@@ -102,23 +119,27 @@ class LockInForecast:
             agi_forecasts: List of AGI timeline forecasts
             p_misalignment: Probability of AGI misalignment
             p_wwiii: WWIII probability for each year
+            p_wbe: Whole brain emulation probability for each year
+            p_stable_total: Stable totalitarian probability for each year
+            p_world_gov: World government probability for each year
             cpt: Conditional probability table
         Returns:
             Dictionary containing both input probabilities and final forecast
         """
-        # Combine AGI forecasts
-        p_agi = self.calculate_agi_probability(agi_forecasts)
 
         # Calculate final lock-in probability
         p_lock_in = self.calculate_conditional_probability(
-            p_agi, p_misalignment, p_wwiii, cpt
+            p_agi, p_misalignment, p_wwiii, p_wbe, p_stable_total, p_world_gov, cpt
         )
 
         return {
             "years": self.forecast_years,
-            "p_agi": p_agi.tolist(),
+            "p_agi": p_agi,
             "p_wwiii": p_wwiii,
-            "p_misalignment": p_misalignment,
+            "p_misalignment": [p_misalignment] * len(self.forecast_years),
+            "p_wbe": p_wbe,
+            "p_stable_total": p_stable_total,
+            "p_world_gov": p_world_gov,
             "p_lock_in": p_lock_in,
         }
 
@@ -180,46 +201,92 @@ def plot_forecast(forecast):
 
 # %%
 def main():
-    agi_forecasts = [
-        [0.2809, 0.6433, 0.7649, 0.8673, 0.9250],  # Epoch model-based
-        [0.6572, 0.9334, 0.9603, 0.9697, 0.9745],  # Metaculus weakly general
-        [0.4183, 0.8478, 0.9002, 0.9279, 0.9552],  # Metaculus general
-        [0.1000, 0.5324, 0.8027, 1.0000, 1.0000],  # AI Impacts
-        [0.3100, 0.6480, 0.7380, 0.8280, 0.9180],  # Samotsvety
+    p_agi = [0.234123, 0.684444, 0.809520, 0.962057, 0.991274]
+    p_alignment = [
+        0.39715637,
+        0.43708259,
+        0.46858015,
+        0.49230160,
+        0.50954967,
     ]
-    alignment_difficulty_vals = [
-        0.4,
-        0.15,
-        0.75,
-        0.65,
-        0.75,
-        0.7,
-        0.95,
-        0.5,
-        0.001,
-        0.3,
-        0.8,
-    ]
+    p_wwiii = [0.3000, 0.3144, 0.3861, 0.4579, 0.5297]
+    p_wbe = [0.0653, 0.402, 0.5218, 0.599, 0.6549]
+    p_stable_total = [0.000288, 0.000405, 0.000539, 0.000689, 0.000861]
+    p_world_gov = [0.0048, 0.0161, 0.04, 0.0639, 0.0752]
 
-    p_misalignment = get_geometric_mean(alignment_difficulty_vals)
-
-    p_wwiii = [0.3000, 0.3144, 0.3861, 0.4579, 0.5297]  # Interpolated/extrapolated
-
-    # Sample conditional probability table
-    # (AGI, Misaligned, WWIII) -> P(Lock-in)
+    # Conditional probability table
+    # (AGI, Alignment, WWIII, WBE, Stable Totalitarianism, World Government) -> P(Lock-in)
     cpt = {
-        (True, True, True): 0.95,  # Very high chance with both AGI and WWIII
-        (True, True, False): 0.80,  # High chance with misaligned AGI alone
-        (True, False, True): 0.70,  # High chance with aligned AGI and WWIII
-        (True, False, False): 0.30,  # Lower chance with aligned AGI alone
-        (False, True, True): 0.60,  # Moderate chance with WWIII alone
-        (False, True, False): 0.15,  # Lower without any factors
-        (False, False, True): 0.60,  # As above
-        (False, False, False): 0.15,  # As above
+        (True, True, True, True, True, True): 0.51,
+        (True, True, True, True, True, False): 0.50,
+        (True, True, True, True, False, True): 0.41,
+        (True, True, True, True, False, False): 0.40,
+        (True, True, True, False, True, True): 0.41,
+        (True, True, True, False, True, False): 0.40,
+        (True, True, True, False, False, True): 0.31,
+        (True, True, True, False, False, False): 0.30,
+        (True, True, False, True, True, True): 0.41,
+        (True, True, False, True, True, False): 0.40,
+        (True, True, False, True, False, True): 0.31,
+        (True, True, False, True, False, False): 0.30,
+        (True, True, False, False, True, True): 0.31,
+        (True, True, False, False, True, False): 0.30,
+        (True, True, False, False, False, True): 0.21,
+        (True, True, False, False, False, False): 0.20,
+        (True, False, True, True, True, True): 0.41,
+        (True, False, True, True, True, False): 0.40,
+        (True, False, True, True, False, True): 0.31,
+        (True, False, True, True, False, False): 0.30,
+        (True, False, True, False, True, True): 0.31,
+        (True, False, True, False, True, False): 0.30,
+        (True, False, True, False, False, True): 0.21,
+        (True, False, True, False, False, False): 0.20,
+        (True, False, False, True, True, True): 0.31,
+        (True, False, False, True, True, False): 0.30,
+        (True, False, False, True, False, True): 0.21,
+        (True, False, False, True, False, False): 0.20,
+        (True, False, False, False, True, True): 0.21,
+        (True, False, False, False, True, False): 0.20,
+        (True, False, False, False, False, True): 0.11,
+        (True, False, False, False, False, False): 0.10,
+        (False, True, True, True, True, True): 0.41,
+        (False, True, True, True, True, False): 0.40,
+        (False, True, True, True, False, True): 0.31,
+        (False, True, True, True, False, False): 0.30,
+        (False, True, True, False, True, True): 0.31,
+        (False, True, True, False, True, False): 0.30,
+        (False, True, True, False, False, True): 0.21,
+        (False, True, True, False, False, False): 0.20,
+        (False, True, False, True, True, True): 0.31,
+        (False, True, False, True, True, False): 0.30,
+        (False, True, False, True, False, True): 0.21,
+        (False, True, False, True, False, False): 0.20,
+        (False, True, False, False, True, True): 0.21,
+        (False, True, False, False, True, False): 0.20,
+        (False, True, False, False, False, True): 0.11,
+        (False, True, False, False, False, False): 0.10,
+        (False, False, True, True, True, True): 0.31,
+        (False, False, True, True, True, False): 0.30,
+        (False, False, True, True, False, True): 0.21,
+        (False, False, True, True, False, False): 0.20,
+        (False, False, True, False, True, True): 0.21,
+        (False, False, True, False, True, False): 0.20,
+        (False, False, True, False, False, True): 0.11,
+        (False, False, True, False, False, False): 0.10,
+        (False, False, False, True, True, True): 0.21,
+        (False, False, False, True, True, False): 0.20,
+        (False, False, False, True, False, True): 0.11,
+        (False, False, False, True, False, False): 0.10,
+        (False, False, False, False, True, True): 0.11,
+        (False, False, False, False, True, False): 0.10,
+        (False, False, False, False, False, True): 0.01,
+        (False, False, False, False, False, False): 0.00,
     }
 
     forecaster = LockInForecast()
-    forecast = forecaster.generate_forecast(agi_forecasts, p_misalignment, p_wwiii, cpt)
+    forecast = forecaster.generate_forecast(
+        p_agi, p_alignment, p_wwiii, p_wbe, p_stable_total, p_world_gov, cpt
+    )
 
     print("\nLock-in Forecast Results:")
     print("-----------------------")

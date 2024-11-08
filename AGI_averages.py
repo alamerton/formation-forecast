@@ -47,3 +47,10 @@ df["geometric_mean_odds"] = df.apply(
 )
 print(df.to_string(index=False))  # %%
 # 0.234123, 0.684444, 0.809520, 0.845268, 0.840579
+
+# %%
+print(df["geometric_mean_odds"].to_string(index=False))
+
+# [0.234123, 0.684444, 0.809520, 0.962057, 0.991274]
+
+# %%
