@@ -1,20 +1,22 @@
 # %% Imports
 import numpy as np
-from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_interp_spline
+from scipy.interpolate import PchipInterpolator
 
 # %% Set probability values
 years = [2030, 2055, 2080, 2105, 2130]
 
-stable_totalitarianism = [0.000288, 0.000405, 0.000539, 0.000689, 0.000861]
+agi = [0.234123, 0.684444, 0.809520, 0.962057, 0.991274]
 
 
 # %% Create smooth curves using spline interpolation
 years_smooth = np.linspace(min(years), max(years), 500)
 
-spline_stable_totalitarianism = make_interp_spline(years, stable_totalitarianism, k=3)
-stable_totalitarianism_smooth = spline_stable_totalitarianism(years_smooth)
+# spline_agi = make_interp_spline(years, agi, k=3)
+# agi_smooth = spline_agi(years_smooth)
+
+pchip_agi = PchipInterpolator(years, agi)
+agi_smooth = np.clip(pchip_agi(years_smooth), 0, 1)  # Clip values to [0, 1]
 
 
 # %% Create plot
@@ -22,7 +24,7 @@ plt.figure(figsize=(6, 4), dpi=300)
 # Plotting the smooth curves
 plt.plot(
     years_smooth,
-    stable_totalitarianism_smooth,
+    agi_smooth,
     label="First Whole Brain Emulation",
     color="blue",
 )
@@ -33,19 +35,19 @@ plt.plot(
 # Plotting the original data points
 plt.scatter(
     years,
-    stable_totalitarianism,
+    agi,
     label="Probabilities",
     color="purple",
     marker="x",
 )
 
-plt.title("Average Stable Totalitarianism Probabilities")
+plt.title("Average AGI Probabilities")
 plt.xlabel("Year")
 plt.ylabel("Probability")
 plt.legend()
 plt.grid(True, linestyle="--", alpha=0.7)
 
-plt.ylim(0, 0.01)
+plt.ylim(0, 1)
 plt.xticks(years)
 
 

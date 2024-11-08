@@ -1,6 +1,6 @@
 # %%
 from utils.logistic_interpolation import get_logistic_interpolation
-from utils.geometric_mean_odds import get_geometric_mean
+from utils.geometric_mean_odds import get_geometric_mean, odds_to_probability
 import pandas as pd
 
 # %%
@@ -92,8 +92,10 @@ combined_df = pd.merge(
 )
 
 combined_df["geometric_mean_odds"] = combined_df.apply(
-    lambda row: get_geometric_mean(
-        [row["bryan_probability_percentage"], row["stephen_probability_percentage"]]
+    lambda row: odds_to_probability(
+        get_geometric_mean(
+            [row["bryan_probability_percentage"], row["stephen_probability_percentage"]]
+        )
     ),
     axis=1,
 )
