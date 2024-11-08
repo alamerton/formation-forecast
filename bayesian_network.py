@@ -21,22 +21,6 @@ class LockInForecast:
         p_world_gov: List[float],
         cpt: Dict[Tuple[bool, bool, bool, bool, bool, bool], float],
     ) -> List[float]:
-        """
-        Calculates lock-in probability using a simplified Bayesian
-        network
-        Args:
-            p_agi: AGI probability for each year
-            p_misalignment: Probability of AGI misalignment
-            p_wwiii: WWIII probability for each year
-            p_wbe: Whole brain emulation probability for each year
-            p_stable_total: Stable totalitarian probability for each
-            year
-            p_world_gov: World government probability for each year
-            cpt: Conditional probability table for lock-in given those
-            probabilities
-        Returns:
-            Lock-in probability for each year
-        """
         p_lock_in = []
 
         for year_idx in range(len(self.forecast_years)):
@@ -113,19 +97,6 @@ class LockInForecast:
         p_world_gov: List[float],
         cpt: Dict[Tuple[bool, bool, bool, bool, bool, bool], float],
     ) -> Dict[str, List[float]]:
-        """
-        Generates complete lock-in forecast
-        Args:
-            agi_forecasts: List of AGI timeline forecasts
-            p_misalignment: Probability of AGI misalignment
-            p_wwiii: WWIII probability for each year
-            p_wbe: Whole brain emulation probability for each year
-            p_stable_total: Stable totalitarian probability for each year
-            p_world_gov: World government probability for each year
-            cpt: Conditional probability table
-        Returns:
-            Dictionary containing both input probabilities and final forecast
-        """
 
         # Calculate final lock-in probability
         p_lock_in = self.calculate_conditional_probability(
