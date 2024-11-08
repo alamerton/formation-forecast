@@ -3,6 +3,7 @@ import numpy as np
 from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
+from utils.geometric_mean_odds import get_geometric_mean
 
 
 # %%
@@ -14,15 +15,34 @@ class LockInForecast:
         self, agi_forecasts: List[List[float]]
     ) -> List[float]:
         """
-        Combines multiple AGI timeline forecasts using weighted averaging
+        Combines multiple AGI timeline forecasts using geometric mean of
+        odds
         Args:
-            agi_forecasts: List of forecasts, each containing probabilities for forecast_years
+            agi_forecasts: List of forecasts, each containing
+            probabilities for forecast_years
         Returns:
             Combined AGI probability for each year
         """
         # Weights could be adjusted based on forecast quality/credibility
+        # For each column (year) in agi forecasts, return the geometric
+        # mean of odds of each value in that column (each forecast
+        # representing that year)
+
+        # [0.2809, 0.6433, 0.7649, 0.8673, 0.9250],  # Epoch model-based
+        # [0.6572, 0.9334, 0.9603, 0.9697, 0.9745],  # Metaculus weakly general
+        # [0.4183, 0.8478, 0.9002, 0.9279, 0.9552],  # Metaculus general
+        # [0.1000, 0.5324, 0.8027, 1.0000, 1.0000],  # AI Impacts
+        # [0.3100, 0.6480, 0.7380, 0.8280, 0.9180],  # Samotsvety
+
         weights = np.ones(len(agi_forecasts)) / len(agi_forecasts)
-        return np.average(agi_forecasts, weights=weights, axis=0)
+        # return np.average(agi_forecasts, weights=weights, axis=0)
+        average_probs = []
+        # For each distribution
+        for col in zip(*agi_forecasts):
+            average_probs[col] = get_geometric_mean(agi_forecasts[col])
+
+        # Returns single distribution, average_probs, of shape (1,5) where thing[i] =
+        # probability of agi for year i
 
     def calculate_conditional_probability(
         self,
@@ -167,8 +187,21 @@ def main():
         [0.1000, 0.5324, 0.8027, 1.0000, 1.0000],  # AI Impacts
         [0.3100, 0.6480, 0.7380, 0.8280, 0.9180],  # Samotsvety
     ]
+    alignment_difficulty_vals = [
+        0.4,
+        0.15,
+        0.75,
+        0.65,
+        0.75,
+        0.7,
+        0.95,
+        0.5,
+        0.001,
+        0.3,
+        0.8,
+    ]
 
-    p_misalignment = 0.5293  # Mean from expert predictions
+    p_misalignment = get_geometric_mean(alignment_difficulty_vals)
 
     p_wwiii = [0.3000, 0.3144, 0.3861, 0.4579, 0.5297]  # Interpolated/extrapolated
 
@@ -180,9 +213,9 @@ def main():
         (True, False, True): 0.70,  # High chance with aligned AGI and WWIII
         (True, False, False): 0.30,  # Lower chance with aligned AGI alone
         (False, True, True): 0.60,  # Moderate chance with WWIII alone
-        (False, True, False): 0.15,  # Lower without AGI or WWIII
-        (False, False, True): 0.60,  # Same as above case
-        (False, False, False): 0.15,  # Lower without any factors
+        (False, True, False): 0.15,  # Lower without any factors
+        (False, False, True): 0.60,  # As above
+        (False, False, False): 0.15,  # As above
     }
 
     forecaster = LockInForecast()
