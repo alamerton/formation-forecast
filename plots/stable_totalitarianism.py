@@ -23,7 +23,7 @@ plt.figure(figsize=(6, 4), dpi=300)
 plt.plot(
     years_smooth,
     stable_totalitarianism_smooth,
-    label="First Whole Brain Emulation",
+    label="Stable Totalitarianism",
     color="blue",
 )
 

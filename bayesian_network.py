@@ -2,8 +2,7 @@
 import numpy as np
 from typing import List, Dict, Tuple
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_interp_spline
-from utils.geometric_mean_odds import get_geometric_mean
+from scipy.interpolate import PchipInterpolator
 
 
 # %%
@@ -90,7 +89,7 @@ class LockInForecast:
     def generate_forecast(
         self,
         p_agi: List[float],
-        p_misalignment: float,
+        p_misalignment: List[float],
         p_wwiii: List[float],
         p_wbe: List[float],
         p_stable_total: List[float],
@@ -107,7 +106,7 @@ class LockInForecast:
             "years": self.forecast_years,
             "p_agi": p_agi,
             "p_wwiii": p_wwiii,
-            "p_misalignment": [p_misalignment] * len(self.forecast_years),
+            "p_misalignment": p_misalignment,
             "p_wbe": p_wbe,
             "p_stable_total": p_stable_total,
             "p_world_gov": p_world_gov,
@@ -120,51 +119,58 @@ class LockInForecast:
 
 def plot_forecast(forecast):
     years = forecast["years"]
-    p_agi = forecast["p_agi"]
-    p_wwiii = forecast["p_wwiii"]
-    p_lock_in = forecast["p_lock_in"]
 
-    # Create smooth curves using spline interpolation
-    years_smooth = np.linspace(min(years), max(years), 500)  # 500 points for smoothness
+    probabilities = {
+        "AGI": forecast["p_agi"],
+        "WWIII": forecast["p_wwiii"],
+        "Misalignment": forecast["p_misalignment"],
+        "WBE": forecast["p_wbe"],
+        "Stable Total.": forecast["p_stable_total"],
+        "World Gov.": forecast["p_world_gov"],
+        "Lock-in": forecast["p_lock_in"],
+    }
 
-    # Interpolating AGI Probability
-    spline_agi = make_interp_spline(years, p_agi, k=3)  # Cubic spline
-    p_agi_smooth = spline_agi(years_smooth)
+    years_smooth = np.linspace(min(years), max(years), 500)
 
-    # Interpolating WWIII Probability
-    spline_wwiii = make_interp_spline(years, p_wwiii, k=3)  # Cubic spline
-    p_wwiii_smooth = spline_wwiii(years_smooth)
+    plt.figure(figsize=(6, 4))
 
-    # Interpolating Lock-in Probability
-    spline_lock_in = make_interp_spline(years, p_lock_in, k=3)  # Cubic spline
+    for label, values in probabilities.items():
+        if label != "Lock-in":
+            spline = PchipInterpolator(years, values)
+            values_smooth = spline(years_smooth)
+
+            plt.plot(
+                years_smooth, values_smooth, color="grey", alpha=0.2, linestyle="--"
+            )
+            plt.scatter(years, values, color="grey", alpha=0.2, marker="o", s=20)
+
+    spline_lock_in = PchipInterpolator(years, probabilities["Lock-in"])
     p_lock_in_smooth = spline_lock_in(years_smooth)
 
-    plt.figure(figsize=(12, 6))
+    plt.plot(
+        years_smooth,
+        p_lock_in_smooth,
+        label="Lock-in",
+        color="green",
+        linewidth=2,
+    )
+    plt.scatter(
+        years,
+        probabilities["Lock-in"],
+        label="Probabilities",
+        color="green",
+        marker="^",
+        s=50,
+    )
 
-    # Plotting the smooth curves
-    plt.plot(years_smooth, p_agi_smooth, label="AGI Probability", color="blue")
-    plt.plot(years_smooth, p_wwiii_smooth, label="WWIII Probability", color="orange")
-    plt.plot(years_smooth, p_lock_in_smooth, label="Lock-in Probability", color="green")
-
-    # Plotting the original data points
-    plt.scatter(years, p_agi, color="blue", marker="o")  # AGI points
-    plt.scatter(years, p_wwiii, color="orange", marker="s")  # WWIII points
-    plt.scatter(years, p_lock_in, color="green", marker="^")  # Lock-in points
-
-    plt.title("Lock-in Forecast Over Time")
+    plt.title("Lock-in Forecast Plotted with Conditional Probabilities")
     plt.xlabel("Year")
     plt.ylabel("Probability")
     plt.legend()
     plt.grid(True, linestyle="--", alpha=0.7)
 
-    plt.ylim(0, 1)  # Set y-axis limits from 0 to 1
-    plt.xticks(years)  # Set x-axis ticks to the forecast years
-
-    # # Add value labels at the original data points
-    # for i, year in enumerate(years):
-    #     plt.text(year, p_agi[i], f"{p_agi[i]:.2f}", ha="center", va="bottom")
-    #     plt.text(year, p_wwiii[i], f"{p_wwiii[i]:.2f}", ha="center", va="bottom")
-    #     plt.text(year, p_lock_in[i], f"{p_lock_in[i]:.2f}", ha="center", va="top")
+    plt.ylim(0, 1)
+    plt.xticks(years)
 
     plt.tight_layout()
     plt.show()
@@ -185,73 +191,214 @@ def main():
     p_stable_total = [0.000288, 0.000405, 0.000539, 0.000689, 0.000861]
     p_world_gov = [0.0048, 0.0161, 0.04, 0.0639, 0.0752]
 
+    # Conditional Probability Weights
+    agi_weight = 0.1
+    alignment_weight = 0.1
+    wwiii_weight = 0.1
+    wbe_weight = 0.1
+    stable_total_weight = 0.1
+    world_gov_weight = 0.1
+
     # Conditional probability table
     # (AGI, Alignment, WWIII, WBE, Stable Totalitarianism, World Government) -> P(Lock-in)
     cpt = {
-        (True, True, True, True, True, True): 0.51,
-        (True, True, True, True, True, False): 0.50,
-        (True, True, True, True, False, True): 0.41,
-        (True, True, True, True, False, False): 0.40,
-        (True, True, True, False, True, True): 0.41,
-        (True, True, True, False, True, False): 0.40,
-        (True, True, True, False, False, True): 0.31,
-        (True, True, True, False, False, False): 0.30,
-        (True, True, False, True, True, True): 0.41,
-        (True, True, False, True, True, False): 0.40,
-        (True, True, False, True, False, True): 0.31,
-        (True, True, False, True, False, False): 0.30,
-        (True, True, False, False, True, True): 0.31,
-        (True, True, False, False, True, False): 0.30,
-        (True, True, False, False, False, True): 0.21,
-        (True, True, False, False, False, False): 0.20,
-        (True, False, True, True, True, True): 0.41,
-        (True, False, True, True, True, False): 0.40,
-        (True, False, True, True, False, True): 0.31,
-        (True, False, True, True, False, False): 0.30,
-        (True, False, True, False, True, True): 0.31,
-        (True, False, True, False, True, False): 0.30,
-        (True, False, True, False, False, True): 0.21,
-        (True, False, True, False, False, False): 0.20,
-        (True, False, False, True, True, True): 0.31,
-        (True, False, False, True, True, False): 0.30,
-        (True, False, False, True, False, True): 0.21,
-        (True, False, False, True, False, False): 0.20,
-        (True, False, False, False, True, True): 0.21,
-        (True, False, False, False, True, False): 0.20,
-        (True, False, False, False, False, True): 0.11,
-        (True, False, False, False, False, False): 0.10,
-        (False, True, True, True, True, True): 0.41,
-        (False, True, True, True, True, False): 0.40,
-        (False, True, True, True, False, True): 0.31,
-        (False, True, True, True, False, False): 0.30,
-        (False, True, True, False, True, True): 0.31,
-        (False, True, True, False, True, False): 0.30,
-        (False, True, True, False, False, True): 0.21,
-        (False, True, True, False, False, False): 0.20,
-        (False, True, False, True, True, True): 0.31,
-        (False, True, False, True, True, False): 0.30,
-        (False, True, False, True, False, True): 0.21,
-        (False, True, False, True, False, False): 0.20,
-        (False, True, False, False, True, True): 0.21,
-        (False, True, False, False, True, False): 0.20,
-        (False, True, False, False, False, True): 0.11,
-        (False, True, False, False, False, False): 0.10,
-        (False, False, True, True, True, True): 0.31,
-        (False, False, True, True, True, False): 0.30,
-        (False, False, True, True, False, True): 0.21,
-        (False, False, True, True, False, False): 0.20,
-        (False, False, True, False, True, True): 0.21,
-        (False, False, True, False, True, False): 0.20,
-        (False, False, True, False, False, True): 0.11,
-        (False, False, True, False, False, False): 0.10,
-        (False, False, False, True, True, True): 0.21,
-        (False, False, False, True, True, False): 0.20,
-        (False, False, False, True, False, True): 0.11,
-        (False, False, False, True, False, False): 0.10,
-        (False, False, False, False, True, True): 0.11,
-        (False, False, False, False, True, False): 0.10,
-        (False, False, False, False, False, True): 0.01,
-        (False, False, False, False, False, False): 0.00,
+        (True, True, True, True, True, True): sum(
+            [
+                agi_weight,
+                alignment_weight,
+                wwiii_weight,
+                wbe_weight,
+                stable_total_weight,
+                world_gov_weight,
+            ]
+        ),
+        (True, True, True, True, True, False): sum(
+            [
+                agi_weight,
+                alignment_weight,
+                wwiii_weight,
+                wbe_weight,
+                stable_total_weight,
+            ]
+        ),
+        (True, True, True, True, False, True): sum(
+            [agi_weight, alignment_weight, wwiii_weight, wbe_weight, world_gov_weight]
+        ),
+        (True, True, True, True, False, False): sum(
+            [agi_weight, alignment_weight, wwiii_weight, wbe_weight]
+        ),
+        (True, True, True, False, True, True): sum(
+            [
+                agi_weight,
+                alignment_weight,
+                wwiii_weight,
+                stable_total_weight,
+                world_gov_weight,
+            ]
+        ),
+        (True, True, True, False, True, False): sum(
+            [agi_weight, alignment_weight, wwiii_weight, stable_total_weight]
+        ),
+        (True, True, True, False, False, True): sum(
+            [agi_weight, alignment_weight, wwiii_weight, world_gov_weight]
+        ),
+        (True, True, True, False, False, False): sum(
+            [agi_weight, alignment_weight, wwiii_weight]
+        ),
+        (True, True, False, True, True, True): sum(
+            [
+                agi_weight,
+                alignment_weight,
+                wbe_weight,
+                stable_total_weight,
+                world_gov_weight,
+            ]
+        ),
+        (True, True, False, True, True, False): sum(
+            [agi_weight, alignment_weight, wbe_weight, stable_total_weight]
+        ),
+        (True, True, False, True, False, True): sum(
+            [agi_weight, alignment_weight, wbe_weight, world_gov_weight]
+        ),
+        (True, True, False, True, False, False): sum(
+            [agi_weight, alignment_weight, wbe_weight]
+        ),
+        (True, True, False, False, True, True): sum(
+            [agi_weight, alignment_weight, stable_total_weight, world_gov_weight]
+        ),
+        (True, True, False, False, True, False): sum(
+            [agi_weight, alignment_weight, stable_total_weight]
+        ),
+        (True, True, False, False, False, True): sum(
+            [agi_weight, alignment_weight, world_gov_weight]
+        ),
+        (True, True, False, False, False, False): sum([agi_weight, alignment_weight]),
+        (True, False, True, True, True, True): sum(
+            [
+                agi_weight,
+                wwiii_weight,
+                wbe_weight,
+                stable_total_weight,
+                world_gov_weight,
+            ]
+        ),
+        (True, False, True, True, True, False): sum(
+            [agi_weight, wwiii_weight, wbe_weight, stable_total_weight]
+        ),
+        (True, False, True, True, False, True): sum(
+            [agi_weight, wwiii_weight, wbe_weight, world_gov_weight]
+        ),
+        (True, False, True, True, False, False): sum(
+            [agi_weight, wwiii_weight, wbe_weight]
+        ),
+        (True, False, True, False, True, True): sum(
+            [agi_weight, wwiii_weight, stable_total_weight, world_gov_weight]
+        ),
+        (True, False, True, False, True, False): sum(
+            [agi_weight, wwiii_weight, stable_total_weight]
+        ),
+        (True, False, True, False, False, True): sum(
+            [agi_weight, wwiii_weight, world_gov_weight]
+        ),
+        (True, False, True, False, False, False): sum([agi_weight, wwiii_weight]),
+        (True, False, False, True, True, True): sum(
+            [agi_weight, wbe_weight, stable_total_weight, world_gov_weight]
+        ),
+        (True, False, False, True, True, False): sum(
+            [agi_weight, wbe_weight, stable_total_weight]
+        ),
+        (True, False, False, True, False, True): sum(
+            [agi_weight, wbe_weight, world_gov_weight]
+        ),
+        (True, False, False, True, False, False): sum([agi_weight, wbe_weight]),
+        (True, False, False, False, True, True): sum(
+            [agi_weight, stable_total_weight, world_gov_weight]
+        ),
+        (True, False, False, False, True, False): sum(
+            [agi_weight, stable_total_weight]
+        ),
+        (True, False, False, False, False, True): sum([agi_weight, world_gov_weight]),
+        (True, False, False, False, False, False): agi_weight,
+        (False, True, True, True, True, True): sum(
+            [
+                alignment_weight,
+                wwiii_weight,
+                wbe_weight,
+                stable_total_weight,
+                world_gov_weight,
+            ]
+        ),
+        (False, True, True, True, True, False): sum(
+            [alignment_weight, wwiii_weight, wbe_weight, stable_total_weight]
+        ),
+        (False, True, True, True, False, True): sum(
+            [alignment_weight, wwiii_weight, wbe_weight, world_gov_weight]
+        ),
+        (False, True, True, True, False, False): sum(
+            [alignment_weight, wwiii_weight, wbe_weight]
+        ),
+        (False, True, True, False, True, True): sum(
+            [alignment_weight, wwiii_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, True, True, False, True, False): sum(
+            [alignment_weight, wwiii_weight, stable_total_weight]
+        ),
+        (False, True, True, False, False, True): sum(
+            [alignment_weight, wwiii_weight, world_gov_weight]
+        ),
+        (False, True, True, False, False, False): sum([alignment_weight, wwiii_weight]),
+        (False, True, False, True, True, True): sum(
+            [alignment_weight, wbe_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, True, False, True, True, False): sum(
+            [alignment_weight, wbe_weight, stable_total_weight]
+        ),
+        (False, True, False, True, False, True): sum(
+            [alignment_weight, wbe_weight, world_gov_weight]
+        ),
+        (False, True, False, True, False, False): sum([alignment_weight, wbe_weight]),
+        (False, True, False, False, True, True): sum(
+            [alignment_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, True, False, False, True, False): sum(
+            [alignment_weight, stable_total_weight]
+        ),
+        (False, True, False, False, False, True): sum(
+            [alignment_weight, world_gov_weight]
+        ),
+        (False, True, False, False, False, False): alignment_weight,
+        (False, False, True, True, True, True): sum(
+            [wwiii_weight, wbe_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, False, True, True, True, False): sum(
+            [wwiii_weight, wbe_weight, stable_total_weight]
+        ),
+        (False, False, True, True, False, True): sum(
+            [wwiii_weight, wbe_weight, world_gov_weight]
+        ),
+        (False, False, True, True, False, False): sum([wwiii_weight, wbe_weight]),
+        (False, False, True, False, True, True): sum(
+            [wwiii_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, False, True, False, True, False): sum(
+            [wwiii_weight, stable_total_weight]
+        ),
+        (False, False, True, False, False, True): sum([wwiii_weight, world_gov_weight]),
+        (False, False, True, False, False, False): wwiii_weight,
+        (False, False, False, True, True, True): sum(
+            [wbe_weight, stable_total_weight, world_gov_weight]
+        ),
+        (False, False, False, True, True, False): sum(
+            [wbe_weight, stable_total_weight]
+        ),
+        (False, False, False, True, False, True): sum([wbe_weight, world_gov_weight]),
+        (False, False, False, True, False, False): wbe_weight,
+        (False, False, False, False, True, True): sum(
+            [stable_total_weight, world_gov_weight]
+        ),
+        (False, False, False, False, True, False): stable_total_weight,
+        (False, False, False, False, False, True): world_gov_weight,
+        (False, False, False, False, False, False): 0.0,
     }
 
     forecaster = LockInForecast()
